@@ -1,0 +1,56 @@
+
+name: Build LienQuanSkinTools APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          sdkmanager "platforms;android-35"
+          sdkmanager "build-tools;35.0.0"
+
+      - name: Extract project
+        run: |
+          unzip -q LienQuanSkinTools_AndroidStudio.zip -d project
+
+      - name: Find Gradle project
+        run: |
+          GRADLE_FILE=$(find project -name gradlew -type f | head -n 1)
+          if [ -z "$GRADLE_FILE" ]; then
+            echo "Không tìm thấy gradlew"
+            exit 1
+          fi
+          echo "PROJECT_DIR=$(dirname "$GRADLE_FILE")" >> $GITHUB_ENV
+
+      - name: Build APK
+        run: |
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LienQuanSkinTools-APK
+          path: project/**/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
